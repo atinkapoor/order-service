@@ -1,0 +1,99 @@
+service: order
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  stage: dev
+  region: us-east-1
+  environment:
+    ORDER_TABLE: "order-${opt:stage, self:provider.stage}"
+    ORDER_DETAIL_TABLE: "orderdetail-${opt:stage, self:provider.stage}"    
+    CUSTOMER_TABLE: "customer-${opt:stage, self:provider.stage}"
+
+functions:
+  customerSubmission:
+    handler: api/customer.submit
+    memorySize: 128
+    description: Submit customer information and starts processing.    
+    events:
+      - http: 
+          path: customers
+          method: post    
+  orderSubmission:
+    handler: api/order.submit
+    memorySize: 128
+    description: Submit order information and starts processing.    
+    events:
+      - http: 
+          path: orders
+          method: post    
+  generateUniqueId:
+    handler: api/generate.submit
+    memorySize: 128
+    description: Generate Unique ID
+    events:
+      - http: 
+          path: generate
+          method: get    
+
+resources:
+  Resources:
+    OrdersDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: "id"
+            AttributeType: "S"   
+        KeySchema:
+          -
+            AttributeName: "id"
+            KeyType: "HASH"
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        StreamSpecification:
+          StreamViewType: "NEW_AND_OLD_IMAGES"
+        TableName: ${self:provider.environment.ORDER_TABLE}
+
+    OrderDetailsDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: "id"
+            AttributeType: "S"   
+        KeySchema:
+          -
+            AttributeName: "id"
+            KeyType: "HASH"
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        StreamSpecification:
+          StreamViewType: "NEW_AND_OLD_IMAGES"
+        TableName: ${self:provider.environment.ORDER_DETAIL_TABLE}
+        
+    CustomersDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: "id"
+            AttributeType: "S"   
+        KeySchema:
+          -
+            AttributeName: "id"
+            KeyType: "HASH"
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        StreamSpecification:
+          StreamViewType: "NEW_AND_OLD_IMAGES"
+        TableName: ${self:provider.environment.CUSTOMER_TABLE}
+
+plugins:
+  - serverless-offline
